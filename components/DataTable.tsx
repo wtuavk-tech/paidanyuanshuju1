@@ -72,6 +72,7 @@ const DataTable: React.FC<DataTableProps> = ({
               <HeaderCell label="派单率" field="dispatchRate" align="right" />
               <HeaderCell label="每单业绩" field="avgRevenue" align="right" />
               <HeaderCell label="30分钟派单率" field="dispatch30MinRate" align="right" />
+              <HeaderCell label="平均响应时间" field="avgResponseTime" align="right" />
               <HeaderCell label="总单量" field="totalOrders" align="right" />
               <HeaderCell label="维修项目" align="center" />
             </tr>
@@ -79,7 +80,7 @@ const DataTable: React.FC<DataTableProps> = ({
           <tbody className="divide-y divide-slate-100">
             {data.length === 0 ? (
                 <tr>
-                    <td colSpan={8} className="px-6 py-12 text-center text-slate-400">
+                    <td colSpan={9} className="px-6 py-12 text-center text-slate-400">
                         未找到符合条件的派单员。
                     </td>
                 </tr>
@@ -122,6 +123,9 @@ const DataTable: React.FC<DataTableProps> = ({
                         }`}>
                         {formatPercent(row.dispatch30MinRate)}
                         </span>
+                    </td>
+                    <td className="px-6 py-4 text-right font-medium text-slate-600">
+                      {row.avgResponseTime}分钟
                     </td>
                     <td className="px-6 py-4 text-right font-medium text-slate-700">{row.totalOrders}</td>
                     <td className="px-6 py-4 text-center">

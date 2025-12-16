@@ -5,9 +5,9 @@ import DataTable from './components/DataTable.tsx';
 import FilterBar from './components/FilterBar.tsx';
 import ComparisonCharts from './components/ComparisonCharts.tsx';
 import IndividualAnalysis from './components/IndividualAnalysis.tsx';
-import { LayoutDashboard, BarChart2 } from 'lucide-react';
+import { BarChart2, Bell, Search, Activity, Trophy, Timer } from 'lucide-react';
 
-// 辅助函数：获取本地时间的 ISO 字符串格式 (yyyy-MM-ddThh:mm)，用于 input[type="datetime-local"]
+// 辅助函数：获取本地时间的 ISO 字符串格式 (yyyy-MM-ddThh:mm)
 const getLocalISOString = (date: Date) => {
   const offset = date.getTimezoneOffset() * 60000;
   const localISOTime = (new Date(date.getTime() - offset)).toISOString().slice(0, 16);
@@ -17,12 +17,13 @@ const getLocalISOString = (date: Date) => {
 const App: React.FC = () => {
   // --- State ---
   const [data] = useState<DispatcherStats[]>(INITIAL_DATA);
+  const [showFilters, setShowFilters] = useState(false);
   
-  // 初始化时间范围：过去7天到当前时间
+  // 初始化时间范围
   const defaultEndDate = new Date();
   const defaultStartDate = new Date();
   defaultStartDate.setDate(defaultEndDate.getDate() - 7);
-  defaultStartDate.setHours(8, 0, 0, 0); // 默认从早上8点开始
+  defaultStartDate.setHours(8, 0, 0, 0);
 
   const [filters, setFilters] = useState<FilterState>({
     startDate: getLocalISOString(defaultStartDate),
@@ -40,16 +41,13 @@ const App: React.FC = () => {
   // 1. Filter Data
   const filteredData = useMemo(() => {
     return data.filter(item => {
-      // Filter by Project
       if (filters.projectCategory !== '全部' && item.projectCategory !== filters.projectCategory) {
         return false;
       }
-      // Filter by Search
       if (filters.searchQuery && !item.name.toLowerCase().includes(filters.searchQuery.toLowerCase())) {
         return false;
       }
       
-      // Filter by Date Time
       if (filters.startDate && filters.endDate) {
           const itemDate = new Date(item.date);
           const start = new Date(filters.startDate);
@@ -79,6 +77,28 @@ const App: React.FC = () => {
   const selectedData = useMemo(() => {
     return data.filter(item => selectedIds.has(item.id));
   }, [data, selectedIds]);
+
+  // 4. Calculate Aggregate Metrics for Overview Bar
+  const overviewMetrics = useMemo(() => {
+    const count = filteredData.length;
+    if (count === 0) return null;
+
+    const totalOrders = filteredData.reduce((acc, cur) => acc + cur.totalOrders, 0);
+    const avgSuccess = filteredData.reduce((acc, cur) => acc + cur.successRate, 0) / count;
+    const avgDispatch = filteredData.reduce((acc, cur) => acc + cur.dispatchRate, 0) / count;
+    const avgRevenue = filteredData.reduce((acc, cur) => acc + cur.avgRevenue, 0) / count;
+    const avg30Min = filteredData.reduce((acc, cur) => acc + cur.dispatch30MinRate, 0) / count;
+    const avgResponse = filteredData.reduce((acc, cur) => acc + cur.avgResponseTime, 0) / count;
+
+    return {
+      totalOrders,
+      avgSuccess: avgSuccess.toFixed(1),
+      avgDispatch: avgDispatch.toFixed(1),
+      avgRevenue: avgRevenue.toFixed(1),
+      avg30Min: avg30Min.toFixed(1),
+      avgResponse: avgResponse.toFixed(1)
+    };
+  }, [filteredData]);
 
   // --- Handlers ---
 
@@ -111,38 +131,91 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 pb-20">
-      {/* Header */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="bg-blue-600 p-2 rounded-lg">
-                <LayoutDashboard className="h-5 w-5 text-white" />
-            </div>
-            <h1 className="text-xl font-bold text-slate-800 tracking-tight">派单员数据分析</h1>
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="text-sm text-slate-500 hidden sm:block">
-               管理员视图
-            </div>
-            <div className="h-8 w-8 rounded-full bg-slate-200 flex items-center justify-center border border-slate-300">
-                <span className="text-xs font-semibold text-slate-600">JD</span>
-            </div>
-          </div>
-        </div>
-      </header>
+      
+      {/* 1. System Announcement (Scrolling) */}
+      <div className="bg-orange-50 border-b border-orange-100 h-10 overflow-hidden flex items-center relative">
+         <div className="absolute left-0 bg-orange-50 z-10 px-4 h-full flex items-center border-r border-orange-100">
+            <Bell className="h-4 w-4 text-orange-500 mr-2" />
+            <span className="text-xs font-bold text-orange-600 whitespace-nowrap">系统公告</span>
+         </div>
+         <div className="whitespace-nowrap overflow-hidden flex-1 mask-linear-fade">
+             <div className="animate-marquee inline-block pl-4 text-xs text-slate-600">
+                <span className="mr-12">🔥 紧急通知：系统将于今晚 02:00 进行例行维护，预计耗时 15 分钟，请提前保存数据。</span>
+                <span className="mr-12">🏆 喜报：恭喜上海浦东区张师傅获得本月“服务之星”称号，奖励现金 500 元！</span>
+                <span className="mr-12">📢 新功能上线：现在支持导出 Excel 报表，请在“设置”中查看。</span>
+                <span>⚡ 效率提升：上周整体派单响应速度提升 12%，感谢大家的努力！</span>
+             </div>
+         </div>
+         <style>{`
+            @keyframes marquee {
+                0% { transform: translateX(0); }
+                100% { transform: translateX(-100%); }
+            }
+            .animate-marquee {
+                animation: marquee 30s linear infinite;
+            }
+            .animate-marquee:hover {
+                animation-play-state: paused;
+            }
+         `}</style>
+      </div>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         
-        {/* Intro / Instructions */}
-        <div className="mb-8">
-            <h2 className="text-2xl font-bold text-slate-800 mb-2">团队绩效</h2>
-            <p className="text-slate-500">
-                分析派单员效率、营收贡献及项目分布。支持精确到小时分钟的时间段筛选。
-            </p>
+        {/* 2. Data Overview Bar */}
+        <div className="bg-blue-50/50 rounded-xl border border-blue-100 p-4 mb-6 flex flex-col md:flex-row items-center justify-between gap-4 shadow-sm">
+            <div className="flex items-center gap-2 min-w-max">
+                <Activity className="h-5 w-5 text-blue-600" />
+                <h2 className="text-lg font-bold text-slate-800">数据概览</h2>
+            </div>
+            
+            {overviewMetrics && (
+                <div className="flex flex-wrap items-center justify-center gap-6 md:gap-10 w-full px-4">
+                     <div className="flex flex-col items-center">
+                         <span className="text-xs text-slate-500 mb-1">成单率</span>
+                         <span className="text-lg font-bold text-slate-800">{overviewMetrics.avgSuccess}%</span>
+                     </div>
+                     <div className="flex flex-col items-center">
+                         <span className="text-xs text-slate-500 mb-1">派单率</span>
+                         <span className="text-lg font-bold text-blue-600">{overviewMetrics.avgDispatch}%</span>
+                     </div>
+                     <div className="flex flex-col items-center">
+                         <span className="text-xs text-slate-500 mb-1">每单业绩</span>
+                         <span className="text-lg font-bold text-orange-600">¥{overviewMetrics.avgRevenue}</span>
+                     </div>
+                     <div className="flex flex-col items-center">
+                         <span className="text-xs text-slate-500 mb-1">30分派单率</span>
+                         <span className="text-lg font-bold text-green-600">{overviewMetrics.avg30Min}%</span>
+                     </div>
+                     <div className="flex flex-col items-center">
+                         <span className="text-xs text-slate-500 mb-1">当日总单量</span>
+                         <span className="text-lg font-bold text-slate-800">{overviewMetrics.totalOrders}</span>
+                     </div>
+                     <div className="flex flex-col items-center">
+                         <span className="text-xs text-slate-500 mb-1">平均响应</span>
+                         <span className="text-lg font-bold text-purple-600 flex items-center gap-1">
+                             {overviewMetrics.avgResponse}
+                             <span className="text-xs font-normal text-slate-400">分</span>
+                         </span>
+                     </div>
+                </div>
+            )}
+
+            <button 
+                onClick={() => setShowFilters(!showFilters)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors min-w-max ${showFilters ? 'bg-blue-100 text-blue-700' : 'bg-white text-blue-600 border border-blue-200 hover:bg-blue-50'}`}
+            >
+                <Search className="h-4 w-4" />
+                点这高级筛选
+            </button>
         </div>
 
-        {/* Filters */}
-        <FilterBar filters={filters} setFilters={setFilters} />
+        {/* Conditional Filters */}
+        {showFilters && (
+            <div className="animate-in slide-in-from-top-2 duration-200">
+                <FilterBar filters={filters} setFilters={setFilters} />
+            </div>
+        )}
 
         {/* Dynamic Analysis Section */}
         {selectedIds.size === 1 && (

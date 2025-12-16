@@ -38,6 +38,7 @@ export const generateMockData = (): DispatcherStats[] => {
             avgRevenue: getRandomInt(150, 500),
             dispatch30MinRate: getRandomInt(50, 95),
             totalOrders: getRandomInt(20, 150),
+            avgResponseTime: getRandomInt(5, 45), // Random response time between 5 and 45 mins
             projectCategory: cat,
             date: itemDate.toISOString() // Stores full datetime
         });

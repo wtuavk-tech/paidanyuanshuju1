@@ -6,6 +6,7 @@ export interface DispatcherStats {
   avgRevenue: number; // Currency
   dispatch30MinRate: number; // Percentage 0-100
   totalOrders: number; // Count
+  avgResponseTime: number; // Minutes
   projectCategory: string; // e.g., 'Home Repair', 'Installation', 'Maintenance'
   date: string; // ISO Date string
 }
