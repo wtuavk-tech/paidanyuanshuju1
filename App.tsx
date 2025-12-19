@@ -134,11 +134,11 @@ const App: React.FC = () => {
       
       {/* 1. System Announcement (Scrolling) */}
       <div className="bg-orange-50 border-b border-orange-100 h-10 overflow-hidden flex items-center relative">
-         <div className="absolute left-0 bg-orange-50 z-10 px-4 h-full flex items-center border-r border-orange-100">
+         <div className="absolute left-0 bg-orange-50 z-10 px-3 h-full flex items-center border-r border-orange-100">
             <Bell className="h-4 w-4 text-orange-500 mr-2" />
             <span className="text-xs font-bold text-orange-600 whitespace-nowrap">系统公告</span>
          </div>
-         <div className="whitespace-nowrap overflow-hidden flex-1 mask-linear-fade">
+         <div className="whitespace-nowrap overflow-hidden flex-1">
              <div className="animate-marquee inline-block pl-4 text-xs text-slate-600">
                 <span className="mr-12">🔥 紧急通知：系统将于今晚 02:00 进行例行维护，预计耗时 15 分钟，请提前保存数据。</span>
                 <span className="mr-12">🏆 喜报：恭喜上海浦东区张师傅获得本月“服务之星”称号，奖励现金 500 元！</span>
@@ -160,42 +160,41 @@ const App: React.FC = () => {
          `}</style>
       </div>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <main className="w-full px-3 py-6">
         
         {/* 2. Data Overview Bar */}
-        <div className="bg-blue-50/50 rounded-xl border border-blue-100 p-4 mb-6 flex flex-col md:flex-row items-center justify-between gap-4 shadow-sm">
-            <div className="flex items-center gap-2 min-w-max">
+        <div className="bg-[#F0F8FF] rounded-xl border border-blue-100 h-[60px] mb-6 flex items-center justify-between px-4 shadow-sm">
+            <div className="flex items-center gap-2 min-w-max mr-4">
                 <Activity className="h-5 w-5 text-blue-600" />
-                <h2 className="text-lg font-bold text-slate-800">数据概览</h2>
+                <h2 className="text-[18px] font-[700] text-slate-800">数据概览</h2>
             </div>
             
             {overviewMetrics && (
-                <div className="flex flex-wrap items-center justify-center gap-6 md:gap-10 w-full px-4">
-                     <div className="flex flex-col items-center">
-                         <span className="text-xs text-slate-500 mb-1">成单率</span>
-                         <span className="text-lg font-bold text-slate-800">{overviewMetrics.avgSuccess}%</span>
+                <div className="flex flex-1 items-center justify-around px-2">
+                     <div className="flex items-center gap-2 whitespace-nowrap">
+                         <span className="text-[12px] font-[400] text-[#5A5E66]">成单率:</span>
+                         <span className="text-[16px] font-[700] text-slate-800">{overviewMetrics.avgSuccess}%</span>
                      </div>
-                     <div className="flex flex-col items-center">
-                         <span className="text-xs text-slate-500 mb-1">派单率</span>
-                         <span className="text-lg font-bold text-blue-600">{overviewMetrics.avgDispatch}%</span>
+                     <div className="flex items-center gap-2 whitespace-nowrap">
+                         <span className="text-[12px] font-[400] text-[#5A5E66]">派单率:</span>
+                         <span className="text-[16px] font-[700] text-blue-600">{overviewMetrics.avgDispatch}%</span>
                      </div>
-                     <div className="flex flex-col items-center">
-                         <span className="text-xs text-slate-500 mb-1">每单业绩</span>
-                         <span className="text-lg font-bold text-orange-600">¥{overviewMetrics.avgRevenue}</span>
+                     <div className="flex items-center gap-2 whitespace-nowrap">
+                         <span className="text-[12px] font-[400] text-[#5A5E66]">每单业绩:</span>
+                         <span className="text-[16px] font-[700] text-orange-600">¥{overviewMetrics.avgRevenue}</span>
                      </div>
-                     <div className="flex flex-col items-center">
-                         <span className="text-xs text-slate-500 mb-1">30分派单率</span>
-                         <span className="text-lg font-bold text-green-600">{overviewMetrics.avg30Min}%</span>
+                     <div className="flex items-center gap-2 whitespace-nowrap">
+                         <span className="text-[12px] font-[400] text-[#5A5E66]">30分派单率:</span>
+                         <span className="text-[16px] font-[700] text-green-600">{overviewMetrics.avg30Min}%</span>
                      </div>
-                     <div className="flex flex-col items-center">
-                         <span className="text-xs text-slate-500 mb-1">当日总单量</span>
-                         <span className="text-lg font-bold text-slate-800">{overviewMetrics.totalOrders}</span>
+                     <div className="flex items-center gap-2 whitespace-nowrap">
+                         <span className="text-[12px] font-[400] text-[#5A5E66]">当日总单量:</span>
+                         <span className="text-[16px] font-[700] text-slate-800">{overviewMetrics.totalOrders}</span>
                      </div>
-                     <div className="flex flex-col items-center">
-                         <span className="text-xs text-slate-500 mb-1">平均响应</span>
-                         <span className="text-lg font-bold text-purple-600 flex items-center gap-1">
-                             {overviewMetrics.avgResponse}
-                             <span className="text-xs font-normal text-slate-400">分</span>
+                     <div className="flex items-center gap-2 whitespace-nowrap">
+                         <span className="text-[12px] font-[400] text-[#5A5E66]">平均响应:</span>
+                         <span className="text-[16px] font-[700] text-purple-600">
+                             {overviewMetrics.avgResponse}分
                          </span>
                      </div>
                 </div>
@@ -203,7 +202,7 @@ const App: React.FC = () => {
 
             <button 
                 onClick={() => setShowFilters(!showFilters)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors min-w-max ${showFilters ? 'bg-blue-100 text-blue-700' : 'bg-white text-blue-600 border border-blue-200 hover:bg-blue-50'}`}
+                className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-colors min-w-max ml-4 ${showFilters ? 'bg-blue-200 text-blue-800' : 'bg-[#D9ECFF] text-blue-700 hover:bg-[#C5E2FF]'}`}
             >
                 <Search className="h-4 w-4" />
                 点这高级筛选
