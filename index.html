@@ -1,40 +1,453 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-  <head>
+<head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>派单员数据分析</title>
+    <title>12.16更新—派单员数据分析专业版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            colors: {
-              border: "hsl(var(--border))",
-              background: "hsl(var(--background))",
-              foreground: "hsl(var(--foreground))",
-            }
-          }
+    <!-- Babel Standalone for JSX compilation -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        body { font-family: 'Inter', 'PingFang SC', 'Microsoft YaHei', sans-serif; }
+        @keyframes marquee {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-100%); }
         }
-      }
-    </script>
-  <script type="importmap">
+        .animate-marquee {
+            animation: marquee 30s linear infinite;
+        }
+        .animate-marquee:hover {
+            animation-play-state: paused;
+        }
+        /* Custom scrollbar for better aesthetics */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+    <script type="importmap">
 {
   "imports": {
-    "react": "https://esm.sh/react@^19.2.3",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react": "https://esm.sh/react@18.3.1",
+    "react-dom": "https://esm.sh/react-dom@18.3.1",
+    "react-dom/client": "https://esm.sh/react-dom@18.3.1/client",
+    "recharts": "https://esm.sh/recharts@2.13.0?external=react,react-dom",
+    "lucide-react": "https://esm.sh/lucide-react@0.460.0?external=react",
     "react/": "https://esm.sh/react@^19.2.3/",
-    "recharts": "https://esm.sh/recharts@^3.6.0",
-    "lucide-react": "https://esm.sh/lucide-react@^0.561.0",
     "vite": "https://esm.sh/vite@^7.3.0",
     "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2"
   }
 }
 </script>
 </head>
-  <body>
+<body class="bg-slate-50">
     <div id="root"></div>
-    <script type="module" src="/index.tsx"></script>
-  </body>
+
+    <script type="text/babel" data-type="module">
+        import React, { useState, useMemo, useEffect } from 'react';
+        import ReactDOM from 'react-dom/client';
+        import { 
+            BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer 
+        } from 'recharts';
+        import { 
+            Bell, Search, Activity, BarChart2, Briefcase, Calendar, 
+            Clock, CalendarDays, X, ArrowUp, ArrowDown, Minus, 
+            ArrowUpDown, CheckSquare, Square
+        } from 'lucide-react';
+
+        // --- Mock Data & Constants ---
+        const PROJECT_CATEGORIES = ['全部', '家庭维修', '家电安装', '日常保养', '紧急管道维修', '暖通空调'];
+        const NAMES = ['张伟', '李强', '王芳', '赵敏', '刘洋', '陈杰', '杨光', '黄婷', '吴刚', '孙丽'];
+        
+        const getRandomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+        
+        const generateMockData = () => {
+            const data = [];
+            const now = new Date();
+            NAMES.forEach((name, index) => {
+                const baseSuccess = getRandomInt(60, 90);
+                const baseDispatch = getRandomInt(70, 95);
+                PROJECT_CATEGORIES.slice(1).forEach(cat => {
+                    const itemDate = new Date(now);
+                    itemDate.setDate(now.getDate() - getRandomInt(0, 7));
+                    itemDate.setHours(getRandomInt(8, 20));
+                    itemDate.setMinutes(getRandomInt(0, 59));
+                    data.push({
+                        id: `${index}-${cat}-${itemDate.getTime()}`,
+                        name: name,
+                        successRate: Math.min(100, Math.max(0, baseSuccess + getRandomInt(-10, 10))),
+                        dispatchRate: Math.min(100, Math.max(0, baseDispatch + getRandomInt(-10, 10))),
+                        avgRevenue: getRandomInt(150, 500),
+                        dispatch30MinRate: getRandomInt(50, 95),
+                        totalOrders: getRandomInt(20, 150),
+                        avgResponseTime: getRandomInt(5, 45),
+                        projectCategory: cat,
+                        date: itemDate.toISOString()
+                    });
+                });
+            });
+            return data;
+        };
+
+        const INITIAL_DATA = generateMockData();
+
+        // --- Components ---
+
+        const MetricChart = ({ title, data, dataKey, color, unit = '', yDomain }) => (
+            <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex flex-col h-full hover:shadow-md transition-shadow">
+                <div className="flex items-center gap-2 mb-4">
+                    <div className="w-1 h-5 rounded-full" style={{ backgroundColor: color }}></div>
+                    <h3 className="text-sm font-bold text-slate-700">{title}</h3>
+                </div>
+                <div className="h-48 flex-grow">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }} barSize={Math.max(20, 100 / (data.length || 1))}>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                            <XAxis dataKey="name" stroke="#94a3b8" fontSize={11} tickLine={false} interval={0} axisLine={{ stroke: '#e2e8f0' }} />
+                            <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} axisLine={false} domain={yDomain || [0, 'auto']} tickFormatter={(value) => `${value}${unit.replace('¥', '')}`} />
+                            <Tooltip 
+                                cursor={{ fill: '#f8fafc' }}
+                                contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', fontSize: '12px' }} 
+                                formatter={(value) => [`${unit}${value}`, title]}
+                            />
+                            <Bar dataKey={dataKey} fill={color} radius={[4, 4, 0, 0]} animationDuration={800} />
+                        </BarChart>
+                    </ResponsiveContainer>
+                </div>
+            </div>
+        );
+
+        const ComparisonRow = ({ label, current, previous, type }) => {
+            const diff = current - previous;
+            let ratio = previous !== 0 ? ((current - previous) / previous) * 100 : 0;
+            const isUp = diff > 0;
+            const isDown = diff < 0;
+            const isNeutral = diff === 0;
+            
+            const textColor = isUp ? 'text-red-600' : isDown ? 'text-green-600' : 'text-slate-400';
+            const bgColor = isUp ? 'bg-red-50' : isDown ? 'bg-green-50' : 'bg-slate-100';
+            const Icon = isUp ? ArrowUp : isDown ? ArrowDown : Minus;
+
+            let diffDisplay = isNeutral ? '-' : type === 'percent' ? `${isUp ? '+' : ''}${diff.toFixed(1)}%` : `${isUp ? '+' : ''}${Math.floor(diff)}`;
+
+            return (
+                <tr className="border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-colors">
+                    <td className="py-3 pl-3 text-sm font-medium text-slate-600">{label}</td>
+                    <td className="py-3 text-right text-sm text-slate-500 font-mono">{type === 'percent' ? previous + '%' : type === 'currency' ? '¥' + previous : previous}</td>
+                    <td className="py-3 text-right text-sm text-slate-800 font-bold font-mono">{type === 'percent' ? current + '%' : type === 'currency' ? '¥' + current : current}</td>
+                    <td className={`py-3 text-right text-sm font-medium font-mono ${textColor}`}>{diffDisplay}</td>
+                    <td className="py-3 pr-3 text-right">
+                        <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-bold justify-end min-w-[70px] ${bgColor} ${textColor}`}>
+                            {!isNeutral && <Icon className="h-3 w-3" strokeWidth={3} />}
+                            {isNeutral ? '0.0%' : `${Math.abs(ratio).toFixed(1)}%`}
+                        </div>
+                    </td>
+                </tr>
+            );
+        };
+
+        const TimeFrameCard = ({ title, icon: Icon, stats, labels, colorClass }) => (
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col h-full hover:shadow-md transition-shadow">
+                <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                    <div className="flex items-center gap-2">
+                        <div className={`p-1.5 ${colorClass} bg-opacity-10 rounded-md`}>
+                            <Icon className={`h-4 w-4 ${colorClass.replace('bg-', 'text-')}`} />
+                        </div>
+                        <h3 className="font-bold text-slate-700 text-sm">{title}</h3>
+                    </div>
+                </div>
+                <div className="p-2">
+                    <table className="w-full">
+                        <thead>
+                            <tr className="text-xs text-slate-400 uppercase tracking-wider">
+                                <th className="pb-2 pl-3 text-left font-normal w-1/4">指标</th>
+                                <th className="pb-2 text-right font-normal w-1/6">{labels.prev}</th>
+                                <th className="pb-2 text-right font-normal w-1/6">{labels.curr}</th>
+                                <th className="pb-2 text-right font-normal w-1/6">差值</th>
+                                <th className="pb-2 pr-3 text-right font-normal w-1/4">环比</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <ComparisonRow label="成单率" current={stats.successRate} previous={Math.max(0, Math.min(100, stats.successRate + getRandomInt(-5, 5)))} type="percent" />
+                            <ComparisonRow label="派单率" current={stats.dispatchRate} previous={Math.max(0, Math.min(100, stats.dispatchRate + getRandomInt(-5, 5)))} type="percent" />
+                            <ComparisonRow label="业绩" current={stats.avgRevenue} previous={Math.max(0, stats.avgRevenue + getRandomInt(-50, 50))} type="currency" />
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        );
+
+        // --- Main App ---
+
+        const App = () => {
+            const [data] = useState(INITIAL_DATA);
+            const [showFilters, setShowFilters] = useState(false);
+            const [selectedIds, setSelectedIds] = useState(new Set());
+            const [sortField, setSortField] = useState('successRate');
+            const [sortDirection, setSortDirection] = useState('desc');
+
+            const getLocalISO = (d) => {
+                const off = d.getTimezoneOffset() * 60000;
+                return (new Date(d.getTime() - off)).toISOString().slice(0, 16);
+            };
+
+            const [filters, setFilters] = useState({
+                startDate: getLocalISO(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)),
+                endDate: getLocalISO(new Date()),
+                projectCategory: '全部',
+                searchQuery: ''
+            });
+
+            const filteredData = useMemo(() => {
+                return data.filter(item => {
+                    if (filters.projectCategory !== '全部' && item.projectCategory !== filters.projectCategory) return false;
+                    if (filters.searchQuery && !item.name.toLowerCase().includes(filters.searchQuery.toLowerCase())) return false;
+                    if (filters.startDate && filters.endDate) {
+                        const itemDate = new Date(item.date);
+                        if (itemDate < new Date(filters.startDate) || itemDate > new Date(filters.endDate)) return false;
+                    }
+                    return true;
+                });
+            }, [data, filters]);
+
+            const sortedData = useMemo(() => {
+                return [...filteredData].sort((a, b) => {
+                    const aV = a[sortField], bV = b[sortField];
+                    if (aV < bV) return sortDirection === 'asc' ? -1 : 1;
+                    if (aV > bV) return sortDirection === 'asc' ? 1 : -1;
+                    return 0;
+                });
+            }, [filteredData, sortField, sortDirection]);
+
+            const selectedData = useMemo(() => data.filter(item => selectedIds.has(item.id)), [data, selectedIds]);
+
+            const metrics = useMemo(() => {
+                if (filteredData.length === 0) return null;
+                const totalOrders = filteredData.reduce((a, c) => a + c.totalOrders, 0);
+                const avg = (key) => (filteredData.reduce((a, c) => a + c[key], 0) / filteredData.length).toFixed(1);
+                return { totalOrders, avgSuccess: avg('successRate'), avgDispatch: avg('dispatchRate'), avgRevenue: avg('avgRevenue'), avg30Min: avg('dispatch30MinRate'), avgResponse: avg('avgResponseTime') };
+            }, [filteredData]);
+
+            const handleToggleSelect = (id) => {
+                const n = new Set(selectedIds);
+                n.has(id) ? n.delete(id) : n.add(id);
+                setSelectedIds(n);
+            };
+
+            const handleSort = (field) => {
+                if (sortField === field) {
+                    setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+                } else {
+                    setSortField(field);
+                    setSortDirection('desc');
+                }
+            };
+
+            const SortIcon = ({ field }) => {
+                if (sortField !== field) return <ArrowUpDown className="h-3 w-3 text-slate-300 ml-1 inline-block" />;
+                return <ArrowUpDown className={`h-3 w-3 text-blue-500 ml-1 inline-block transform ${sortDirection === 'desc' ? 'rotate-180' : ''}`} />;
+            };
+
+            return (
+                <div className="min-h-screen bg-slate-50 pb-20">
+                    <div className="bg-orange-50 border-b border-orange-100 h-10 overflow-hidden flex items-center relative">
+                        <div className="absolute left-0 bg-orange-50 z-10 px-3 h-full flex items-center border-r border-orange-100">
+                            <Bell className="h-4 w-4 text-orange-500 mr-2" />
+                            <span className="text-xs font-bold text-orange-600 whitespace-nowrap">系统公告</span>
+                        </div>
+                        <div className="whitespace-nowrap overflow-hidden flex-1">
+                            <div className="animate-marquee inline-block pl-4 text-xs text-slate-600">
+                                <span className="mr-12">🔥 紧急通知：系统将于今晚 02:00 进行例行维护，预计耗时 15 分钟。</span>
+                                <span className="mr-12">🏆 喜报：恭喜上海浦东区张师傅获得本月“服务之星”称号！</span>
+                                <span className="mr-12">📢 新功能上线：现在支持导出 Excel 报表，请在“设置”中查看。</span>
+                                <span>⚡ 效率提升：上周整体派单响应速度提升 12%，感谢大家的努力！</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <main className="w-full px-3 py-6">
+                        {/* Data Overview Bar - 60px height, background #F0F8FF */}
+                        <div className="bg-[#F0F8FF] rounded-xl border border-blue-100 h-[60px] mb-6 flex items-center justify-between px-4 shadow-sm">
+                            <div className="flex items-center gap-2 min-w-max mr-4">
+                                <Activity className="h-5 w-5 text-blue-600" />
+                                <h2 className="text-[18px] font-[700] text-slate-800">数据概览</h2>
+                            </div>
+                            
+                            {metrics && (
+                                <div className="flex flex-1 items-center justify-around px-2">
+                                    {[
+                                        { l: '成单率', v: metrics.avgSuccess + '%', c: 'text-slate-800' },
+                                        { l: '派单率', v: metrics.avgDispatch + '%', c: 'text-blue-600' },
+                                        { l: '每单业绩', v: '¥' + metrics.avgRevenue, c: 'text-orange-600' },
+                                        { l: '30分派单率', v: metrics.avg30Min + '%', c: 'text-green-600' },
+                                        { l: '当日总单量', v: metrics.totalOrders, c: 'text-slate-800' },
+                                        { l: '平均响应', v: metrics.avgResponse + '分', c: 'text-purple-600' }
+                                    ].map((item, idx) => (
+                                        <div key={idx} className="flex items-center gap-2 whitespace-nowrap">
+                                            <span className="text-[12px] font-[400] text-[#5A5E66]">{item.l}:</span>
+                                            <span className={`text-[16px] font-[700] ${item.c}`}>{item.v}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            <button onClick={() => setShowFilters(!showFilters)} className={`flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-colors min-w-max ml-4 ${showFilters ? 'bg-blue-200 text-blue-800' : 'bg-[#D9ECFF] text-blue-700 hover:bg-[#C5E2FF]'}`}>
+                                <Search className="h-4 w-4" />点这高级筛选
+                            </button>
+                        </div>
+
+                        {showFilters && (
+                            <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 mb-6 flex flex-col lg:flex-row gap-4 items-center justify-between animate-in slide-in-from-top-2">
+                                <div className="flex flex-col md:flex-row gap-4 w-full lg:w-auto">
+                                    <div className="relative w-full md:w-auto">
+                                        <Briefcase className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                                        <select value={filters.projectCategory} onChange={(e) => setFilters({...filters, projectCategory: e.target.value})} className="pl-10 pr-8 py-2 border border-slate-200 rounded-lg text-sm bg-slate-50 min-w-[160px] outline-none">
+                                            {PROJECT_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                                        </select>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <input type="datetime-local" value={filters.startDate} onChange={(e) => setFilters({...filters, startDate: e.target.value})} className="px-3 py-2 border border-slate-200 rounded-lg text-sm bg-slate-50 outline-none" />
+                                        <span className="text-slate-400">至</span>
+                                        <input type="datetime-local" value={filters.endDate} onChange={(e) => setFilters({...filters, endDate: e.target.value})} className="px-3 py-2 border border-slate-200 rounded-lg text-sm bg-slate-50 outline-none" />
+                                    </div>
+                                </div>
+                                <div className="relative w-full lg:w-64">
+                                    <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                                    <input type="text" placeholder="搜索姓名..." value={filters.searchQuery} onChange={(e) => setFilters({...filters, searchQuery: e.target.value})} className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg text-sm bg-slate-50 outline-none" />
+                                </div>
+                            </div>
+                        )}
+
+                        {selectedIds.size === 1 && (
+                            <div className="mb-8 p-4 bg-white rounded-xl border border-slate-200 relative animate-in slide-in-from-top-4">
+                                <button onClick={() => setSelectedIds(new Set())} className="absolute right-4 top-4 text-slate-400 p-1 hover:bg-slate-100 rounded-full"><X className="h-5 w-5"/></button>
+                                <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+                                    <span className="px-2 py-0.5 bg-blue-600 text-white text-xs rounded">深度分析</span>
+                                    {selectedData[0].name}
+                                    <span className="text-slate-400 font-normal text-sm"> | {selectedData[0].projectCategory}</span>
+                                </h3>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                    <TimeFrameCard title="日环比数据" icon={Clock} stats={selectedData[0]} labels={{prev:'昨日', curr:'今日'}} colorClass="bg-blue-600 text-blue-600" />
+                                    <TimeFrameCard title="周环比数据" icon={CalendarDays} stats={selectedData[0]} labels={{prev:'上周', curr:'本周'}} colorClass="bg-purple-600 text-purple-600" />
+                                    <TimeFrameCard title="月环比数据" icon={Calendar} stats={selectedData[0]} labels={{prev:'上月', curr:'本月'}} colorClass="bg-orange-600 text-orange-600" />
+                                </div>
+                            </div>
+                        )}
+
+                        {selectedIds.size > 1 && (
+                            <div className="mb-8 animate-in slide-in-from-top-4">
+                                <div className="flex justify-between items-center mb-4">
+                                    <div className="flex items-center gap-2">
+                                        <BarChart2 className="h-5 w-5 text-blue-600"/>
+                                        <h3 className="text-lg font-bold text-slate-800">对比分析</h3>
+                                        <span className="bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded-full font-medium">已选 {selectedIds.size} 人</span>
+                                    </div>
+                                    <button onClick={() => setSelectedIds(new Set())} className="text-sm text-slate-500 hover:text-red-500 underline transition-colors">清空选择</button>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    <MetricChart title="成单率对比" data={selectedData} dataKey="successRate" color="#3b82f6" unit="%" yDomain={[0,100]} />
+                                    <MetricChart title="派单率对比" data={selectedData} dataKey="dispatchRate" color="#10b981" unit="%" yDomain={[0,100]} />
+                                    <MetricChart title="每单业绩对比" data={selectedData} dataKey="avgRevenue" color="#f59e0b" unit="¥" />
+                                    <MetricChart title="总单量对比" data={selectedData} dataKey="totalOrders" color="#6366f1" unit="" />
+                                    <div className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl p-5 flex flex-col justify-center items-center text-center">
+                                        <p className="text-slate-400 text-sm font-medium">共对比 {selectedIds.size} 位成员</p>
+                                        <p className="text-slate-400 text-xs mt-1">数据基于所选时间范围</p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-sm text-left whitespace-nowrap">
+                                    <thead className="bg-slate-50 border-b text-slate-500">
+                                        <tr>
+                                            <th className="px-6 py-4 w-12 text-center">
+                                                <button onClick={() => setSelectedIds(selectedIds.size === sortedData.length ? new Set() : new Set(sortedData.map(d=>d.id)))}>
+                                                    {selectedIds.size === sortedData.length ? <CheckSquare className="h-5 w-5 text-blue-600"/> : <Square className="h-5 w-5 text-slate-300"/>}
+                                                </button>
+                                            </th>
+                                            <th className="px-6 py-4 cursor-pointer hover:bg-slate-100" onClick={()=>handleSort('name')}>
+                                                <div className="flex items-center">姓名<SortIcon field="name"/></div>
+                                            </th>
+                                            <th className="px-6 py-4 text-right cursor-pointer hover:bg-slate-100" onClick={()=>handleSort('successRate')}>
+                                                <div className="flex items-center justify-end">成单率<SortIcon field="successRate"/></div>
+                                            </th>
+                                            <th className="px-6 py-4 text-right cursor-pointer hover:bg-slate-100" onClick={()=>handleSort('dispatchRate')}>
+                                                <div className="flex items-center justify-end">派单率<SortIcon field="dispatchRate"/></div>
+                                            </th>
+                                            <th className="px-6 py-4 text-right cursor-pointer hover:bg-slate-100" onClick={()=>handleSort('avgRevenue')}>
+                                                <div className="flex items-center justify-end">每单业绩<SortIcon field="avgRevenue"/></div>
+                                            </th>
+                                            <th className="px-6 py-4 text-right cursor-pointer hover:bg-slate-100" onClick={()=>handleSort('dispatch30MinRate')}>
+                                                <div className="flex items-center justify-end">30分钟派单率<SortIcon field="dispatch30MinRate"/></div>
+                                            </th>
+                                            <th className="px-6 py-4 text-right cursor-pointer hover:bg-slate-100" onClick={()=>handleSort('avgResponseTime')}>
+                                                <div className="flex items-center justify-end">平均响应时间<SortIcon field="avgResponseTime"/></div>
+                                            </th>
+                                            <th className="px-6 py-4 text-right cursor-pointer hover:bg-slate-100" onClick={()=>handleSort('totalOrders')}>
+                                                <div className="flex items-center justify-end">总单量<SortIcon field="totalOrders"/></div>
+                                            </th>
+                                            <th className="px-6 py-4 text-center">维修项目</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                        {sortedData.length === 0 ? (
+                                            <tr><td colSpan={9} className="px-6 py-12 text-center text-slate-400">未找到符合条件的记录</td></tr>
+                                        ) : sortedData.map(row => (
+                                            <tr key={row.id} className={`hover:bg-blue-50/20 transition-colors ${selectedIds.has(row.id) ? 'bg-blue-50/50' : ''}`}>
+                                                <td className="px-6 py-4 text-center">
+                                                    <button onClick={() => handleToggleSelect(row.id)}>
+                                                        {selectedIds.has(row.id) ? <CheckSquare className="h-5 w-5 text-blue-600"/> : <Square className="h-5 w-5 text-slate-300"/>}
+                                                    </button>
+                                                </td>
+                                                <td className="px-6 py-4 font-medium">
+                                                    <div className="flex items-center">
+                                                        <div className="h-8 w-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold mr-3">{row.name.charAt(0)}</div>
+                                                        <span className="text-slate-700">{row.name}</span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4 text-right font-medium text-slate-600">{row.successRate}%</td>
+                                                <td className="px-6 py-4 text-right font-medium text-slate-600">{row.dispatchRate}%</td>
+                                                <td className="px-6 py-4 text-right font-medium text-slate-600">¥{row.avgRevenue}</td>
+                                                <td className="px-6 py-4 text-right">
+                                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${row.dispatch30MinRate >= 80 ? 'bg-green-100 text-green-800' : row.dispatch30MinRate >= 60 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>
+                                                        {row.dispatch30MinRate}%
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 text-right font-medium text-slate-600">{row.avgResponseTime}分钟</td>
+                                                <td className="px-6 py-4 text-right font-medium text-slate-700">{row.totalOrders}</td>
+                                                <td className="px-6 py-4 text-center">
+                                                    <span className="inline-block px-2 py-1 text-xs text-slate-500 bg-slate-100 rounded-md">{row.projectCategory}</span>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div className="bg-slate-50 px-6 py-3 border-t border-slate-200 flex justify-between items-center text-xs text-slate-500">
+                                <span>显示 {sortedData.length} 条记录</span>
+                                <span>已选择 {selectedIds.size} 项</span>
+                            </div>
+                        </div>
+                    </main>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
 </html>
